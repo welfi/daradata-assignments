@@ -1,10 +1,11 @@
 import argparse
+import re
 import pandas as pd
 
 
 def load_data(file_path: str) -> pd.DataFrame:
     """
-    Load the data from a TSV file and return a DataFrame.
+    Load the data from a TSV file and return a Pandas DataFrame.
     """
     return pd.read_csv(file_path, sep='\t')
 
@@ -18,9 +19,9 @@ def unpivot_data(data: pd.DataFrame) -> pd.DataFrame:
     data['unit'] = split_columns[0]
     data['sex'] = split_columns[1]
     data['age'] = split_columns[2]
-    data['geo\\time'] = split_columns[3]
+    data['region'] = split_columns[3]
     data = data.drop(columns=['unit,sex,age,geo\\time'])
-    data = pd.melt(data, id_vars=['unit', 'sex', 'age', 'geo\\time'], var_name='year', value_name='value')
+    data = pd.melt(data, id_vars=['unit', 'sex', 'age', 'region'], var_name='year', value_name='value')
     return data
 
 
@@ -31,16 +32,18 @@ def clean_data_types(data: pd.DataFrame) -> pd.DataFrame:
     Remove rows with NaN values in 'value' column.
     """
     data['year'] = data['year'].astype(int)
+    data['value'] = data['value'].apply(lambda x: re.sub('[^\\d.]', '', x))
     data['value'] = pd.to_numeric(data['value'], errors='coerce')
     data = data.dropna(subset=['value'])
     return data
+
 
 
 def filter_data(data: pd.DataFrame, region: str) -> pd.DataFrame:
     """
     Filter the data to include rows where 'geo\time' column is equal to the given region.
     """
-    return data[data['geo\\time'] == region]
+    return data[data['region'] == region]
 
 
 def save_cleaned_data(data: pd.DataFrame, file_path: str) -> None:
@@ -58,7 +61,7 @@ def clean_data(country: str = 'PT') -> None:
     data = load_data('life_expectancy/data/eu_life_expectancy_raw.tsv')
     data = unpivot_data(data)
     data = clean_data_types(data)
-    data = filter_data(data, 'PT')
+    data = filter_data(data, country)
     save_cleaned_data(data, 'life_expectancy/data/pt_life_expectancy.csv')
 
 
