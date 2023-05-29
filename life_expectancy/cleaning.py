@@ -58,7 +58,7 @@ def clean_data(country: str = 'PT') -> None:
     data = load_data('life_expectancy/data/eu_life_expectancy_raw.tsv')
     data = unpivot_data(data)
     data = clean_data_types(data)
-    data = filter_data(data, 'PT')
+    data = filter_data(data, country)
     save_cleaned_data(data, 'life_expectancy/data/pt_life_expectancy.csv')
 
 
