@@ -36,3 +36,5 @@ Now you're ready to go!
 Open the `README.md` file inside each assignment and follow the instructions.
 
 > Note: Remember that all commands inside the Readme files assume you are in the root of the project.
+
+[![Lint and Test](https://github.com/welfi/daradata-assignments/actions/workflows/ci.yml/badge.svg)](https://github.com/welfi/daradata-assignments/actions/workflows/ci.yml)
