@@ -4,7 +4,7 @@ import pandas as pd
 
 def load_data(file_path: str) -> pd.DataFrame:
     """
-    Load the data from a TSV file and return a DataFrame.
+    Load the data from a TSV file and return a Pandas DataFrame.
     """
     return pd.read_csv(file_path, sep='\t')
 
