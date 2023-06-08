@@ -46,27 +46,28 @@ def filter_data(data: pd.DataFrame, region: str) -> pd.DataFrame:
     return data[data['region'] == region]
 
 
-def save_cleaned_data(data: pd.DataFrame, file_path: str) -> None:
+def save_data(data: pd.DataFrame, file_path: str) -> None:
     """
     Save the cleaned data to a CSV file.
     """
     data.to_csv(file_path, index=False)
 
 
-def clean_data(country: str = 'PT') -> None:
+def clean_data(data: pd.DataFrame, country: str = 'PT') -> pd.DataFrame:
     """
-    Clean the data by performing loading, unpivot, cleaning data types,
-    filtering, and saving the cleaned data.
+    Clean the data by performing loading, unpivot, cleaning data types
+    and filtering
     """
-    data = load_data('life_expectancy/data/eu_life_expectancy_raw.tsv')
     data = unpivot_data(data)
     data = clean_data_types(data)
     data = filter_data(data, country)
-    save_cleaned_data(data, 'life_expectancy/data/pt_life_expectancy.csv')
+    return data
 
 
 if __name__ == "__main__":  # pragma: no cover
     parser = argparse.ArgumentParser(description='Clean life expectancy data')
     parser.add_argument('--country', default='PT', help='Country code to filter the data (default: PT)')
     args = parser.parse_args()
-    clean_data(args.country)
+    dataset = load_data('life_expectancy/data/eu_life_expectancy_raw.tsv')
+    dataset = clean_data(dataset, args.country)
+    save_data(dataset, 'life_expectancy/data/pt_life_expectancy.csv')
