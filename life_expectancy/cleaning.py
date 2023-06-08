@@ -67,7 +67,9 @@ def clean_data(data: pd.DataFrame, country: str = 'PT') -> pd.DataFrame:
 if __name__ == "__main__":  # pragma: no cover
     parser = argparse.ArgumentParser(description='Clean life expectancy data')
     parser.add_argument('--country', default='PT', help='Country code to filter the data (default: PT)')
+    parser.add_argument('--load_path', default='data/eu_life_expectancy_raw.tsv', help='TSV file path')
+    parser.add_argument('--save_path', default='data/pt_life_expectancy.csv')
     args = parser.parse_args()
-    dataset = load_data('life_expectancy/data/eu_life_expectancy_raw.tsv')
+    dataset = load_data(args.load_path)
     dataset = clean_data(dataset, args.country)
-    save_data(dataset, 'life_expectancy/data/pt_life_expectancy.csv')
+    save_data(dataset, args.save_path)
