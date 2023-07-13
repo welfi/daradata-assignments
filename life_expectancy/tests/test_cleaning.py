@@ -1,12 +1,11 @@
-"""Tests for the cleaning module"""
 from unittest.mock import patch
+import pytest
 import pandas as pd
 
 from life_expectancy.cleaning import (
-    unpivot_data,
-    clean_data_types,
-    filter_data,
-    clean_data,
+    CsvDataProcessor,
+    StrategyFactory,
+    JsonDataProcessor,
 )
 from life_expectancy.io import load_data, save_data
 
@@ -14,7 +13,8 @@ from life_expectancy.io import load_data, save_data
 def test_clean_data(pt_life_expectancy_expected, eu_life_expectancy_sample):
     """Run the `clean_data` function and compare the output to the expected output"""
     eu_life_expectancy_dataset = eu_life_expectancy_sample
-    dataset = clean_data(eu_life_expectancy_dataset, country="PT")
+    strategy = CsvDataProcessor()
+    dataset = strategy.process(eu_life_expectancy_dataset, country="PT")
     expected_dataset = pt_life_expectancy_expected
     pd.testing.assert_frame_equal(dataset, expected_dataset)
 
@@ -40,7 +40,8 @@ def test_unpivot_data():
         }
     )
 
-    result = unpivot_data(sample_data)
+    strategy = CsvDataProcessor()
+    result = strategy.unpivot_data(sample_data)
 
     pd.testing.assert_frame_equal(result, expected_output)
 
@@ -49,7 +50,8 @@ def test_clean_data_types():
     """test function for clean data types"""
     data = pd.DataFrame({"year": [2020, 2021], "value": ["10.5%", "20.3%"]})
     expected = pd.DataFrame({"year": [2020, 2021], "value": [10.5, 20.3]})
-    result = clean_data_types(data)
+    strategy = CsvDataProcessor()
+    result = strategy.clean_data_types(data)
     pd.testing.assert_frame_equal(result, expected)
 
 
@@ -62,24 +64,64 @@ def test_filter_data():
         }
     )
     expected = pd.DataFrame({"region": ["region1", "region1"], "value": [10, 30]})
-    result = filter_data(data, "region1")
+    strategy = CsvDataProcessor()
+    result = strategy.filter_data(data, "region1")
     result = result.reset_index(drop=True)
     pd.testing.assert_frame_equal(result, expected)
 
 
 @patch("life_expectancy.io.pd.read_csv")
-def test_load_data(mock_read_csv):
-    """test function for load data"""
+def test_load_data_csv(mock_read_csv):
+    """test function for loading a TSV file"""
     mock_read_csv.return_value = pd.DataFrame({"col1": [1, 2, 3], "col2": [4, 5, 6]})
-    result = load_data("test.csv")
-    mock_read_csv.assert_called_once_with("test.csv", sep="\t")
+    result = load_data("test.tsv")
+    mock_read_csv.assert_called_once_with("test.tsv", sep="\t")
     expected = pd.DataFrame({"col1": [1, 2, 3], "col2": [4, 5, 6]})
     pd.testing.assert_frame_equal(result, expected)
 
 
-@patch("life_expectancy.io.pd.DataFrame.to_csv")
-def test_save_data(mock_to_csv):
+@patch("life_expectancy.io.pd.read_csv")
+def test_load_data_json(mock_read_csv):
+    """test function for loading a JSON file"""
+    mock_read_csv.side_effect = FileNotFoundError()  # Simulate a FileNotFoundError
+    with open("test.json", "w", encoding="UTF-8") as json_file:
+        json_file.write('[{"col1": 1, "col2": 4}, {"col1": 2, "col2": 5}]')
+
+    result = load_data("test.json")
+    expected = pd.DataFrame({"col1": [1, 2], "col2": [4, 5]})
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_load_data_invalid_format():
+    """test function for loading a file with an invalid format"""
+    invalid_file_path = "test.csv"
+    with pytest.raises(ValueError, match="Invalid file format"):
+        load_data(invalid_file_path)
+
+
+def test_save_data():
     """test function for save data"""
     data = pd.DataFrame({"col1": [1, 2, 3], "col2": [4, 5, 6]})
-    save_data(data, "test.csv")
-    mock_to_csv.assert_called_once_with("test.csv", index=False)
+    save_data(data, "test.tsv")  # Save as a TSV file
+    saved_data = load_data("test.tsv")  # Load the saved data as TSV
+
+    pd.testing.assert_frame_equal(data, saved_data)
+
+
+def test_create_strategy():
+    """Test create_strategy method in StrategyFactory"""
+    data_format_csv = "csv"
+    strategy_csv = StrategyFactory.create_strategy(data_format_csv)
+    assert isinstance(strategy_csv, CsvDataProcessor)
+
+    data_format_json = "json"
+    strategy_json = StrategyFactory.create_strategy(data_format_json)
+    assert isinstance(strategy_json, JsonDataProcessor)
+
+    data_format_invalid = "invalid"
+    try:
+        StrategyFactory.create_strategy(data_format_invalid)
+    except ValueError as error:
+        assert str(error) == "Invalid data format"
+    else:
+        assert False, "Expected ValueError to be raised"
